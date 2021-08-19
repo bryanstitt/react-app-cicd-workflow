@@ -13,7 +13,7 @@ jobs:
       SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
     steps:
       - uses: actions/checkout@v2
-      - name: Cache node_modules
+      - name: Cache node_modules # caching makes it supposed to run faster
         uses: actions/cache@v1
         with:
           path: ~/.npm
@@ -29,38 +29,38 @@ jobs:
       - run: npm test -- --coverage
         env:
           CI: true
-      - name: Upload Test Coverage
+      - name: Upload Test Coverage # upload code coverage artifact
         uses: actions/upload-artifact@v1
         with:
           name: code-coverage
           path: coverage
-      - name: Build Project
+      - name: Build Project # make build folder
         if: github.event_name == 'push'
         run: npm run build
-      - name: Upload Build Folder
+      - name: Upload Build Folder # make build artifact
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v1
         with:
           name: build
           path: build
-      - name: ZIP Assets
+      - name: ZIP Assets # zip build and coverage folders
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: |
           zip -r build.zip ./build
           zip -r coverage.zip ./coverage
       #- uses: actions/download-artifact - takes in artifact we can download
-      - name: Create a Release
+      - name: Create a Release # ok this doesn't work lmao, supposed to update release notes
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Deploy to Staging
+      - name: Deploy to Staging # deploy staging surge 
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         run: npx surge --project ./build --domain soggy-elbow.surge.sh
-      - name: Deploy to Production
+      - name: Deploy to Production # deploy surge when merging with master
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: npx surge --project ./build --domain pretty-thunder.surge.sh     
-      - name: Upload Coverage Reports
+      - name: Upload Coverage Reports # implement codecov for coverage report
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: npx codecov
         env:
