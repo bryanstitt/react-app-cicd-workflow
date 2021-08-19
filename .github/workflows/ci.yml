@@ -1,37 +1,78 @@
 name: CI
 on:
   pull_request:
-    branches: [develop]
+    branches: [develop, master]
   push:
-    branches: [develop]
+    branches: [develop, master]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
+      SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
     steps:
       - uses: actions/checkout@v2
-      - name: Cache node_modules
+      - name: Cache node_modules # caching makes it supposed to run faster
         uses: actions/cache@v1
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-key: |
+          restore-keys: |
             ${{ runner.os }}-node-
       - name: Use NodeJS
         uses: actions/setup-node@v1
         with:
           node-version: "12.x"
       - run: npm ci
-      - run: npm run format:check
+      - run: npm run format
       - run: npm test -- --coverage
         env:
           CI: true
-      - name: Build Project
+      - name: Upload Test Coverage # upload code coverage artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: code-coverage
+          path: coverage
+      - name: Build Project # make build folder
         if: github.event_name == 'push'
         run: npm run build
-      - name: Deploy to Staging
+      - name: Upload Build Folder # make build artifact
         if: github.event_name == 'push'
-        run: npx surge --project ./build --domain soggy-elbow.surge.sh
+        uses: actions/upload-artifact@v1
+        with:
+          name: build
+          path: build
+      - name: ZIP Assets # zip build and coverage folders
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          zip -r build.zip ./build
+          zip -r coverage.zip ./coverage
+      #- uses: actions/download-artifact - takes in artifact we can download
+      - name: Create a Release # ok this doesn't work lmao, supposed to update release notes
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: npx semantic-release
         env:
-          SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
-          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CUSTOM_TOKEN }}
+      - name: Deploy to Staging # deploy staging surge 
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        run: npx surge --project ./build --domain soggy-elbow.surge.sh
+      - name: Deploy to Production # deploy surge when merging with master
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: npx surge --project ./build --domain pretty-thunder.surge.sh     
+      - name: Upload Coverage Reports # implement codecov for coverage report
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: npx codecov
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Open Issue
+        if: failure() && github.event_name == 'pull_request'
+        run: |
+          curl --request POST \
+          --url https://api.github.com/repos/${{ github.repository }}/issues \
+          --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+          --header 'content-type: application/json' \
+          --data '{
+            "title": "Automated issue for commit: ${{ github.sha }}",
+            "body": "This issue was automatically created by the GitHub Action workflow **${{ github.workflow }}**. \n\n The commit hash was: _${{ github.sha }}_."
+          }'
