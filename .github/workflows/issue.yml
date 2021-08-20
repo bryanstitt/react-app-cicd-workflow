@@ -1,0 +1,12 @@
+name: Notify on Issue # opens an issue (very similar to release.yml)
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  slack-message:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Slack Message # doesnt work bc release doesn't work
+        run: |
+         curl -X POST -H 'Content-type: application/json' --data '{"text":"New issue created: <${{ github.event.issue.html_url }}|${{ github.event.issue.title }}.>"}' ${{ secrets.SLACK_WEBHOOK }}

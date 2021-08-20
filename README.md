@@ -1,4 +1,5 @@
-# Getting Started with Create React App
+![](https://github.com/bryanstitt1/react-app-cicd-workflow/workflows/CI/badge.svg?branch=develop&event=push)
+## this is structured as github.com/{username}/{repo-name}/{workflows-folder}/{workflow-name}/badge.svg?branch=develop&event=push
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
