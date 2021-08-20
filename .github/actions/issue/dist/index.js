@@ -3755,12 +3755,12 @@ async function run() {
 
     const octokit = new github.getOctokit(token)
 
-    const response = await octokit.rest.issues.create({
+    const response = await octokit.rest.issues.create({ // for some reason validation fails here
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
       title,
       body,
-      assignees: assignees ? assignees.split("\n") : undefined
+      assignees: assignees ? assignees.split('\n') : undefined
     })
 
     core.setOutput('issue', JSON.stringify(response.data))

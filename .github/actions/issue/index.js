@@ -10,7 +10,7 @@ async function run() {
 
     const octokit = new github.getOctokit(token)
 
-    const response = await octokit.rest.issues.create({
+    const response = await octokit.rest.issues.create({ // for some reason validation fails here
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
       title,
